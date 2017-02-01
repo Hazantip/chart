@@ -1,0 +1,18 @@
+doctype html
+html(class="no-js", lang="ru")
+
+	include ../components/head/head.pug
+	include ../components/example/example.pug
+	include ../components/footer/footer.pug
+
+	head
+		+head(head.defaults)
+	body.page
+		| %=symbols=%
+
+		section.page__wrapper
+			+example()
+			pre#log
+
+		//- Main scripts. You can replace it, but I recommend you to leave it here
+		script(src='%=static=%js/main%=hash=%%=min=%.js')
