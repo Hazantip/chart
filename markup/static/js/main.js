@@ -4,141 +4,227 @@
  This file can be used as entry point for webpack!
  */
 
-import Highcharts from 'highcharts';
-import DynamicChart from './hch';
+import $ from 'jquery';
+import Chartist from 'chartist';
+import Hammer from 'hammerjs';
 //import { debounce, log } from './utils';
+//import './hch';
 
+class Chart {
+	constructor(container, data, options) {
+		this.container = container;
+		this.$c = $(container);
+		this.hc = new Hammer(this.$c[0]);
+		this.chart = null;
+		this.width = 0;
+		this.height = 0;
+		this.offset = {};
+		this.drawEnable = false;
+		this.eventsAttached = false;
+		this.scrollBlocked = false;
 
-document.onreadystatechange = function () {
-	if (document.readyState === 'complete') {
-		//console.log('2. document onreadystatechange');
+		this.defaultOptions = {
+			high: 10,
+			low: 0,
+			showArea: false,
+			axisY: {
+				onlyInteger: true,
+				offset: 40,
+				labelInterpolationFnc: function (value) {
+					return `${value * 1000}$`;
+				}
+			},
+			axisX: {},
+		};
+		this.options = Chartist.extend({}, this.defaultOptions, options);
+		this.data = data;
 	}
-};
 
-document.addEventListener('DOMContentLoaded', () => {
-	//console.log('1. document is ready. I can sleep now');
+	setDrawEnable(state) {
+		this.drawEnable = state;
+	}
 
-	const arr = [0, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4];
-	function fillArray(fromPoint, toPoint, array) {
-		const len = array.length;
-		return new Array(len).fill(null).map((item, key) => {
-			if (key >= fromPoint && key < toPoint) {
-				return array[key];
-			} else {
-				return null;
+	mouseDownListener() {
+		this.$c.on('mousedown touchstart', (e) => {
+			this.setDrawEnable(true);
+			this.scrollBlocked = true;
+			//console.info(e);
+		});
+	}
+
+	mouseUpListener() {
+		this.$c.on('mouseup touchend', (e) => {
+			this.setDrawEnable(false);
+			this.scrollBlocked = false;
+			//console.info(e);
+		});
+	}
+
+	resizeListener() {
+		//window.addEventListener('resize', this.init.bind(this), false);
+		//window.addEventListener('resize', debounce(this.init.bind(this), 300), false);
+	}
+
+	mouseMoveListener() {
+		$(window).on('touchmove', (e) => {
+			if (this.scrollBlocked) {
+				e.preventDefault();
+			}
+		});
+		//const el = document.querySelector(this.container);
+		$(document).on('mousemove touchmove', (e) => {
+
+			console.info('move...');
+
+			if (!this.drawEnable) {
+				return false;
+			}
+
+			//e.originalEvent.preventDefault(); // cursor drag fix
+
+			const pageX = e.pageX || e.touches[0].pageX || e.srcEvent.pageX;
+			const pageY = e.pageY || e.touches[0].pageY || e.srcEvent.pageY;
+
+			console.info(`[x, y]: ${pageX}, ${pageY}`);
+
+			const partY = this.height / this.options.high; // 5 max Y val
+			const partX = this.width / this.data.labels.length; // 5 max X val
+			const xSelector = Math.round(
+				((pageX - this.offset.left) / partX)
+			).toFixed(0);
+
+			//console.info(xSelector);
+
+			if (xSelector > (this.data.labels.length / 2 - 1) && xSelector < this.data.labels.length) {
+
+				this.data.series[1][xSelector] = Math.floor(
+					parseInt(((this.height + this.offset.top) - pageY) / partY, 10)
+				).toFixed(0);
+
+				this.chart.update();
 			}
 		});
 	}
 
-	function generateArrays(array, breakPoint) {
-		const count = 3;
-		return new Array(count).fill(null).map((item, key) => {
-			let result;
-			switch (key) {
-				case 0:
-					result = fillArray(0, breakPoint, array); // array.slice(0, breakPoint);
-					break;
-				case 1:
-					result = fillArray(breakPoint - 1, array.length, array); // array.slice(breakPoint, array.length);
-					break;
-				case 2:
-					result = fillArray(breakPoint - 1, breakPoint, array); // array.slice(breakPoint - 1, breakPoint);
-					break;
-				default:
-					break;
+	drawListener() {
+		console.info('draw');
+		this.chart.on('draw', (data) => {
+			if (data.type === 'point' || data.type === 'line') {
+				// console.info(data);
+
+				// if (data.seriesIndex === 0) {
+				// 	data.element.animate({
+				// 	  opacity: {
+				// 		 begin: 0,
+				// 		 dur: 0,
+				// 		 from: 0,
+				// 		 to: 0,
+				// 	  }
+				// });
+				// }
 			}
-			return result;
+			if (data.type === 'grid') {
+				//this.$grid = $(data.element._node).parent();
+				//const gridWidth = this.$grid[0].getBoundingClientRect().width;
+				//
+				//if (gridWidth !== 0 && gridWidth > this.width) {
+				//	this.init();
+				//	if (!this.eventsAttached) {
+				//		this.eventsAttached = true;
+				//		this.attachListeners();
+				//	}
+				//}
+			}
 		});
 	}
 
-	const params = {
-		credits: {
-			enabled: false
-		},
-		chart: {
-			animation: false,
-		},
-		title: {
-			text: 'Under Mr. Obama, the number of immigrants convicted of crimes who were deported...'
-		},
-		xAxis: {
-			categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-		},
-		yAxis: {
-			min: 0,
-			max: 300
-		},
-		plotOptions: {
-			series: {
-				point: {
-					events: {
+	createdListener() {
+		this.chart.on('created', (obj) => {
+			console.log('created');
 
-						drag: function (e) {
-							// Returning false stops the drag and drops. Example:
-							console.info('drag: ', e);
-							if (e.newY > 300) {
-								//this.y = 300;
-								//return false;
-							}
-
-							$('#drag').html(
-								'Dragging <b>' + this.series.name + '</b>, <b>' + this.category + '</b> to <b>' + Highcharts.numberFormat(e.y, 2) + '</b>');
-						},
-						drop: function () {
-							$('#drop').html(
-								'In <b>' + this.series.name + '</b>, <b>' + this.category + '</b> was set to <b>' + Highcharts.numberFormat(this.y, 2) + '</b>');
-						}
-					}
-				},
-				stickyTracking: false
-			},
-			column: {
-				stacking: 'normal'
-			},
-			line: {
-				cursor: 'ns-resize'
+			if (!this.eventsAttached) {
+				this.init(obj);
 			}
-		},
-		tooltip: {
-			yDecimals: 2
-		},
-		legend: {
-			layout: 'horizontal',
-			align: 'center',
-			verticalAlign: 'top',
-			x: 50,
-			y: 300,
-			floating: true,
-			//borderWidth: 1,
-			//backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
-		},
+		});
+	}
+
+	attachListeners() {
+		console.info('attach');
+		this.mouseDownListener();
+		this.mouseUpListener();
+		this.resizeListener();
+		this.mouseMoveListener();
+		this.eventsAttached = true;
+	}
+
+	init(obj) {
+		console.info('init');
+		this.offset = {
+			top: this.$c[0].getBoundingClientRect().top + obj.chartRect.y2,
+			left: this.$c[0].getBoundingClientRect().left + obj.chartRect.x1,
+		};
+		this.height = obj.chartRect.height();
+		this.width = obj.chartRect.width();
+
+		if (!this.eventsAttached) {
+			this.attachListeners();
+		}
+
+		//console.info(
+		//	'init',
+		//	'offset: ', this.offset,
+		//	'h: ', this.height,
+		//	'w: ', this.width
+		//);
+	}
+
+	render() {
+		const { container, data, options } = this;
+
+		this.chart = new Chartist.Line(container, data, options);
+		this.createdListener();
+		this.drawListener();
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+$(document).ready(() => {
+
+	const data = {
+		labels: ['2008', null, null, '2011', null, null, '2014', null, null, '2017'],
 		series: [
-			{
-				name: 'Bush years',
-				data: generateArrays(arr, arr.length / 2)[0],
-				draggableY: false,
-				draggableX: false,
-			},
-			{
-				name: 'Obama years',
-				data: generateArrays(arr, arr.length / 2)[1],
-				draggableY: false,
-				draggableX: false,
-				//visible: false,
-
-			},
-			{
-				//name: 'My opinion',
-				data: generateArrays(arr, arr.length / 2)[2],
-				dashStyle: 'ShortDash',
-				color: '#e67300',
-				lineWidth: 3,
-			}
-		]
+			[3, 1, 9, 6, 8, 4, 5, 6, 9, 2],
+			[null, null, null, null, 8],
+		],
 	};
 
-	const chartEl = document.getElementById('highchart');
-	const chart = new DynamicChart(chartEl, params, { breakPoint: arr.length / 2 });
+	const options = {
+		showArea: false,
+		lineSmooth: Chartist.Interpolation.none({
+			fillHoles: false
+		}),
+	};
 
-}, false);
+	const chart = new Chart('.ct-chart', data, options);
+	chart.render();
+	console.info(chart);
 
+	$('.btn').on('click', () => {
+	// Array(10).fill().map((e,i)=> (Math.random() * 10).toFixed(0) )
+	// Array.from({length: 10}, (v, k) => (Math.random() * 10).toFixed(0) );
+		data.series[0] = Array(10).fill().map(() => (Math.random() * 10).toFixed(0) );
+		data.series[1][4] = data.series[0][4];
+		chart.chart.update(data);
+	// chart.render();
+	});
+
+});
