@@ -10,12 +10,6 @@ html, body {
 
 .page__wrapper {
     min-height: 100%;
-    
-    padding-top: 30px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
 }
 
 * html .page__wrapper {
@@ -29,10 +23,4 @@ html, body {
 	max-height: 200px;
 	overflow: auto;
 	font-size: 12px;
-}
-
-#highchart {
-	height: 400px;
-	width: 600px;
-	max-width: 100%;
 }

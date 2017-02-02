@@ -1,7 +1,16 @@
 .chart-wrap {
+	position: relative;
 	max-width: 100%;
 	@media screen and (max-width: 500px) {
 		width: 100%;
+	}
+	.overlay {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		z-index: 1;
 	}
 }
 
@@ -16,10 +25,10 @@
     //@include no-select();
 	
 	//desktop
-	touch-action: auto !important;
-	user-select: none !important;
-	-webkit-user-drag: none !important;
-	-webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+	//touch-action: auto !important;
+	//user-select: none !important;
+	//-webkit-user-drag: none !important;
+	//-webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
 	//-webkit-touch-callout: auto !important;
 	
 	//mobile
@@ -62,25 +71,25 @@
 }
 
 .btn {
-	background-color: #dddddd;
-    outline: none;
-    cursor: pointer;
-    display: block;
+    position: relative;
+    z-index: 1;
+	display: block;
 	width: 200px;
     margin: 30px auto;
+    padding: 15px 20px;
+    overflow: hidden;
+    outline: none;
+    cursor: pointer;
+	background-color: #dddddd;
     text-decoration: none;
     text-transform: uppercase;
     color: #fff;
     letter-spacing: 3px;
-    padding: 15px 20px;
-    position: relative;
-    z-index: 1;
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.2, 1);
     font-family: 'Open Sans', sans-serif;
     font-weight: 100;
     font-size: 14px;
     border: none;
+    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.2, 1);
     &:before,
     &:after {
         content: '';

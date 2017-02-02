@@ -4,77 +4,98 @@
  This file can be used as entry point for webpack!
  */
 
-import $ from 'jquery';
+import $ from 'jquery'; // TODO: implement without it
+import { merge } from 'lodash';
 import Chartist from 'chartist';
-import Hammer from 'hammerjs';
 //import { debounce, log } from './utils';
-//import './hch';
+
+const events = {
+	'touch': {
+		'down': 'touchstart',
+		'up': 'touchend',
+		'move': 'touchmove',
+	},
+	'mouse': {
+		'down': 'mousedown',
+		'up': 'mouseup',
+		'move': 'mousemove',
+	},
+};
 
 class Chart {
 	constructor(container, data, options) {
-		this.container = container;
-		this.$c = $(container);
-		this.hc = new Hammer(this.$c[0]);
-		this.chart = null;
-		this.width = 0;
-		this.height = 0;
-		this.offset = {};
-		this.drawEnable = false;
-		this.eventsAttached = false;
-		this.scrollBlocked = false;
 
+		this.container = container;
+		this.el = document.querySelector(container);
+		this.elOverlay = this.el.querySelector('.overlay');
+		this.chart = null;
+
+		this.data = data;
 		this.defaultOptions = {
-			high: 10,
+			high: Math.max(...this.data.series[0]),
 			low: 0,
 			showArea: false,
 			axisY: {
 				onlyInteger: true,
 				offset: 40,
 				labelInterpolationFnc: function (value) {
-					return `${value * 1000}$`;
+					return `${value}$`;
 				}
 			},
 			axisX: {},
 		};
-		this.options = Chartist.extend({}, this.defaultOptions, options);
-		this.data = data;
+		this.options = merge(this.defaultOptions, options);
+
+		this.width = 0;
+		this.height = 0;
+		this.offset = {};
+
+		this.drawEnable = false;
+		this.scrollBlocked = false;
+		this.eventType = 'ontouchstart' in document.documentElement ? 'touch' : 'mouse';
+		this.eventsAttached = false;
+	}
+
+	disableScroll() {
+		document.addEventListener(events[this.eventType].move, (e) => {
+			if (this.scrollBlocked) {
+				e.preventDefault();
+				console.info('blocked');
+			} else {
+				console.info('unblocked');
+			}
+		}, false);
 	}
 
 	setDrawEnable(state) {
 		this.drawEnable = state;
+		this.scrollBlocked = state;
+		this.disableScroll();
 	}
 
-	mouseDownListener() {
-		this.$c.on('mousedown touchstart', (e) => {
-			this.setDrawEnable(true);
-			this.scrollBlocked = true;
-			//console.info(e);
-		});
-	}
-
-	mouseUpListener() {
-		this.$c.on('mouseup touchend', (e) => {
-			this.setDrawEnable(false);
-			this.scrollBlocked = false;
-			//console.info(e);
-		});
-	}
-
-	resizeListener() {
+	onResizeListener() {
 		//window.addEventListener('resize', this.init.bind(this), false);
 		//window.addEventListener('resize', debounce(this.init.bind(this), 300), false);
 	}
 
-	mouseMoveListener() {
-		$(window).on('touchmove', (e) => {
-			if (this.scrollBlocked) {
-				e.preventDefault();
-			}
-		});
-		//const el = document.querySelector(this.container);
-		$(document).on('mousemove touchmove', (e) => {
+	onDownListener() {
+		this.elOverlay.addEventListener(events[this.eventType].down, (e) => {
+			this.setDrawEnable(true);
+			this.log('down');
+		}, true);
+	}
 
-			console.info('move...');
+	onUpListener() {
+		this.elOverlay.addEventListener(events[this.eventType].up, (e) => {
+			this.setDrawEnable(false);
+			this.log('up');
+		}, true);
+	}
+
+	onMoveListener() {
+		this.elOverlay.addEventListener(events[this.eventType].move, (e) => {
+
+			this.log('move');
 
 			if (!this.drawEnable) {
 				return false;
@@ -82,28 +103,65 @@ class Chart {
 
 			//e.originalEvent.preventDefault(); // cursor drag fix
 
-			const pageX = e.pageX || e.touches[0].pageX || e.srcEvent.pageX;
-			const pageY = e.pageY || e.touches[0].pageY || e.srcEvent.pageY;
+			const pageX = e.pageX || e.touches[0].pageX;
+			const pageY = e.pageY || e.touches[0].pageY;
+			const partX = this.width / this.data.labels.length;
+			const partY = this.height / this.options.high;
 
-			console.info(`[x, y]: ${pageX}, ${pageY}`);
+			const points = {
+				y: ( (this.height + this.offset.top) - pageY ) / partY
+			};
 
-			const partY = this.height / this.options.high; // 5 max Y val
-			const partX = this.width / this.data.labels.length; // 5 max X val
-			const xSelector = Math.round(
-				((pageX - this.offset.left) / partX)
-			).toFixed(0);
+			const xSelector = Math.round( ((pageX - this.offset.left) / partX) ).toFixed(0);
 
+			//console.info(`[x, y]: ${pageX}, ${pageY}`);
 			//console.info(xSelector);
 
-			if (xSelector > (this.data.labels.length / 2 - 1) && xSelector < this.data.labels.length) {
+			// TODO: prevent draw from some middle point(should be 1,2,3....  not 3,2,1 or 3,4,5)
 
-				this.data.series[1][xSelector] = Math.floor(
-					parseInt(((this.height + this.offset.top) - pageY) / partY, 10)
-				).toFixed(0);
+			if (
+				xSelector >= 0
+				&& xSelector < this.data.labels.length
+				&& xSelector > (this.data.labels.length / 2 - 1)
+				&& points.y >= 0
+				&& points.y <= this.options.high
+			) {
 
+				this.data.series[1][xSelector] = points.y;
 				this.chart.update();
+				//this.chart.detach();
 			}
-		});
+		}, true);
+	}
+
+	attachListeners() {
+		console.info('attach');
+		this.onDownListener();
+		this.onUpListener();
+		this.onResizeListener();
+		this.onMoveListener();
+		this.eventsAttached = true;
+	}
+
+	init(obj) {
+		console.info('init', obj);
+		this.offset = {
+			top: this.el.getBoundingClientRect().top + obj.chartRect.y2,
+			left: this.el.getBoundingClientRect().left + obj.chartRect.x1,
+		};
+		this.height = obj.chartRect.height();
+		this.width = obj.chartRect.width();
+
+		if (!this.eventsAttached) {
+			this.attachListeners();
+		}
+
+		//console.info(
+		//	'init',
+		//	'offset: ', this.offset,
+		//	'h: ', this.height,
+		//	'w: ', this.width
+		//);
 	}
 
 	drawListener() {
@@ -140,42 +198,14 @@ class Chart {
 
 	createdListener() {
 		this.chart.on('created', (obj) => {
+
 			console.log('created');
+			this.log('created');
 
 			if (!this.eventsAttached) {
 				this.init(obj);
 			}
 		});
-	}
-
-	attachListeners() {
-		console.info('attach');
-		this.mouseDownListener();
-		this.mouseUpListener();
-		this.resizeListener();
-		this.mouseMoveListener();
-		this.eventsAttached = true;
-	}
-
-	init(obj) {
-		console.info('init');
-		this.offset = {
-			top: this.$c[0].getBoundingClientRect().top + obj.chartRect.y2,
-			left: this.$c[0].getBoundingClientRect().left + obj.chartRect.x1,
-		};
-		this.height = obj.chartRect.height();
-		this.width = obj.chartRect.width();
-
-		if (!this.eventsAttached) {
-			this.attachListeners();
-		}
-
-		//console.info(
-		//	'init',
-		//	'offset: ', this.offset,
-		//	'h: ', this.height,
-		//	'w: ', this.width
-		//);
 	}
 
 	render() {
@@ -184,6 +214,16 @@ class Chart {
 		this.chart = new Chartist.Line(container, data, options);
 		this.createdListener();
 		this.drawListener();
+	}
+
+	log(event, custom = { name: '', text: ''}) {
+		$('#log').text(
+			`event: ${event}
+			\nthis.eventType: ${this.eventType}
+			\nthis.scrollBlocked: ${this.scrollBlocked}
+			\nthis.drawEnable: ${this.drawEnable}
+			\n${custom.name} ${custom.text}`
+		);
 	}
 }
 
@@ -194,16 +234,23 @@ class Chart {
 
 
 
-
+var num = (Math.random() * 1000).toFixed(4);
 
 
 $(document).ready(() => {
 
 	const data = {
-		labels: ['2008', null, null, '2011', null, null, '2014', null, null, '2017'],
+		labels: ['2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017'],
 		series: [
-			[3, 1, 9, 6, 8, 4, 5, 6, 9, 2],
-			[null, null, null, null, 8],
+			new Array(10).fill(null).map((arr, i) => {
+				console.info(i);
+				if (i === 4) {
+					return 8;
+				} else {
+					return +(Math.random() * 1000).toFixed(0);
+				}
+			}),
+			[null, null, null, null, 8]
 		],
 	};
 
@@ -216,15 +263,15 @@ $(document).ready(() => {
 
 	const chart = new Chart('.ct-chart', data, options);
 	chart.render();
+
 	console.info(chart);
 
 	$('.btn').on('click', () => {
-	// Array(10).fill().map((e,i)=> (Math.random() * 10).toFixed(0) )
-	// Array.from({length: 10}, (v, k) => (Math.random() * 10).toFixed(0) );
-		data.series[0] = Array(10).fill().map(() => (Math.random() * 10).toFixed(0) );
+
+		data.series[0] = new Array(10).fill(null).map(() => (Math.random() * 10).toFixed(0) );
 		data.series[1][4] = data.series[0][4];
 		chart.chart.update(data);
-	// chart.render();
+
 	});
 
 });
