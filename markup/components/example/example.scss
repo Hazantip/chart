@@ -1,6 +1,10 @@
 .chart-wrap {
 	position: relative;
-	max-width: 100%;
+	
+	width: 500px;
+	//height: 300px;
+	margin: 0 auto;
+
 	@media screen and (max-width: 500px) {
 		width: 100%;
 	}
@@ -11,19 +15,11 @@
 		top: 0;
 		bottom: 0;
 		z-index: 1;
+		@include no-select();
 	}
 }
 
 .ct-chart {
-    display: block;
-    // height: 50vw;
-    // width: 70vw;
-    width: 500px;
-    height: 300px;
-    max-width: 100%;
-    margin: 0 auto;
-    //@include no-select();
-	
 	//desktop
 	//touch-action: auto !important;
 	//user-select: none !important;
@@ -37,85 +33,113 @@
 	//-webkit-touch-callout: none;
 	//-webkit-user-drag: auto !important; // none || auto || element
 	//-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-
-
-    .ct-series {
-        &.ct-series-b {
-            path {
-                stroke: darkseagreen;
-                stroke-dasharray: 1 7;
-                stroke-linecap: round;
-            }
-            line {
-                stroke: darkseagreen;
-            }
-        }
-        &.ct-series-a {
-            path {
-                stroke: gainsboro;
-            }
-            // line:nth-of-type(-n+5) {
-            // 	opacity: 0;
-            // }
-            .ct-point {
-                stroke: gainsboro;
-            }
-            .ct-point:nth-of-type(n+2) {
-                opacity: 0;
-            }
-            .ct-point:nth-of-type(5) {
-                opacity: 1;
-            }
-        }
-    }
+	
+	.ct-series {
+		.ct-line {
+			stroke-linecap: round;
+			stroke-linejoin: bevel;
+		}
+		&.ct-series-a { // final
+			opacity: 1;
+			.ct-area {
+				fill: deepskyblue;
+			}
+			.ct-line {
+				stroke: deepskyblue;
+			}
+			.ct-point {
+				opacity: 0;
+				stroke: deepskyblue;
+				&:last-of-type {
+					opacity: 1;
+				}
+			}
+		}
+		&.ct-series-b { // user
+			.ct-area {
+				//opacity: 0;
+			}
+			.ct-line {
+				stroke: #f4c63d;
+				stroke-dasharray: 1 7;
+				stroke-linecap: round;
+			}
+			.ct-point {
+				opacity: 0;
+				stroke: #f4c63d;
+				&:last-of-type:not(:first-of-type) {
+					opacity: 1;
+				}
+			}
+		}
+		&.ct-series-c { // initial
+			.ct-area {
+				fill: tomato;
+			}
+			.ct-line {
+				stroke: tomato;
+			}
+			.ct-point {
+				stroke: tomato;
+				opacity: 0;
+				&:last-of-type,
+				&:first-of-type {
+					opacity: 1;
+				}
+			}
+			// line:nth-of-type(-n+5) {
+			// 	opacity: 0;
+			// }
+		}
+	}
 }
 
 .btn {
-    position: relative;
-    z-index: 1;
+	position: relative;
+	z-index: 1;
 	display: block;
 	width: 200px;
-    margin: 30px auto;
-    padding: 15px 20px;
-    overflow: hidden;
-    outline: none;
-    cursor: pointer;
+	margin: 30px auto;
+	padding: 15px 20px;
+	overflow: hidden;
+	outline: none;
+	cursor: pointer;
 	background-color: #dddddd;
-    text-decoration: none;
-    text-transform: uppercase;
-    color: #fff;
-    letter-spacing: 3px;
-    font-family: 'Open Sans', sans-serif;
-    font-weight: 100;
-    font-size: 14px;
-    border: none;
-    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.2, 1);
-    &:before,
-    &:after {
-        content: '';
-        position: absolute;
-        display: block;
-    }
-    &:before {
-        top: -120px;
-        left: 50px;
-        z-index: -1;
-        width: calc(100% + 140px);
-        height: 100px;
-        transition: all 0.4s cubic-bezier(0.25, 0.1, 0.2, 1);
-        transform: skew(70deg);
-        background: #f36;
-    }
-    &:after {
-        top: 0;
-        left: 0;
-        z-index: -2;
-        width: calc(100% - 2px);
-        height: calc(100% - 2px);
-        border: 1px solid #fff;
-    }
-    &:hover:before {
-        left: -50px;
-        top: -20px;
-    }
+	text-decoration: none;
+	text-transform: uppercase;
+	color: #fff;
+	letter-spacing: 3px;
+	font-family: 'Open Sans', sans-serif;
+	font-weight: 100;
+	font-size: 14px;
+	border: none;
+	transition: all 0.4s cubic-bezier(0.25, 0.1, 0.2, 1);
+	&:before,
+	&:after {
+		content: '';
+		position: absolute;
+		display: block;
+	}
+	&:before {
+		top: -120px;
+		left: 50px;
+		z-index: -1;
+		width: calc(100% + 140px);
+		height: 100px;
+		transition: all 0.4s cubic-bezier(0.25, 0.1, 0.2, 1);
+		transform: skew(70deg);
+		background: #f36;
+	}
+	&:after {
+		top: 0;
+		left: 0;
+		z-index: -2;
+		width: calc(100% - 2px);
+		height: calc(100% - 2px);
+		border: 1px solid #fff;
+	}
+	&:hover:before {
+		left: -50px;
+		top: -20px;
+	}
 }

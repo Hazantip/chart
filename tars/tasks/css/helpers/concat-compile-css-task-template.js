@@ -157,7 +157,7 @@ module.exports = function generateTaskContent(browser) {
     stylesFilesToConcatinate = [].concat.apply([], stylesFilesToConcatinate);
 
     return gulp.src(stylesFilesToConcatinate, { base: process.cwd() })
-        .pipe(gulpif(generateSourceMaps, sourcemaps.init()))
+        .pipe(gulpif(generateSourceMaps, sourcemaps.update()))
         .pipe(plumber({
             errorHandler(error) {
                 notifier.error(errorMessage, error);

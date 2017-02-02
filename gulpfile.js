@@ -1,6 +1,6 @@
 'use strict';
 
-// Tars main-module init
+// Tars main-module update
 // It is a global var
 require('./tars/tars');
 
@@ -23,11 +23,11 @@ gulp.task('dev', () => gulp.start('main:dev'));
 // Build task. Build release version
 gulp.task('build', () => gulp.start('main:build'));
 
-// Init task. Just start init task
-gulp.task('init', () => gulp.start('service:init'));
+// Init task. Just start update task
+gulp.task('update', () => gulp.start('service:update'));
 
-// Re-init task. Just start re-init task
-gulp.task('re-init', () => gulp.start('service:re-init'));
+// Re-update task. Just start re-update task
+gulp.task('re-update', () => gulp.start('service:re-update'));
 
 // Update-deps task. Just start update-deps task
 gulp.task('update-deps', () => gulp.start('service:update-deps'));
