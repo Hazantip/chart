@@ -69,7 +69,6 @@ class Chart {
 		this.height = 0;
 		this.xAxisStepLength = 0;
 		this.offset = {};
-		this.finalPath = {};
 		this.clipPath = null;
 
 		this.drawEnable = false;
@@ -173,31 +172,30 @@ class Chart {
 		};
 	}
 
-	drawFinalPath() {
-		//this.finalPath.node.style.transition = '1000ms ease';
-		//this.finalPath.node.style.strokeDashoffset = 0;
-		console.info(this.clipPath);
-	}
-
 	drawListener() {
-		console.info('draw');
+		//console.info('draw');
+		const clipPathID = 'FINAL_SERIES_CLIP';
+
 		this.chart.on('draw', (data) => {
-			console.log(data);
-			if (data.type === 'line' && data.index === SERIES_ORDER.final) {
-				//console.log(data, data.element._node.getTotalLength());
-				this.finalPath = {
-					data: data,
-					node: data.element._node,
-					length: data.element._node.getTotalLength(),
-				};
-				data.element.attr({
-					'style': 'clip-path: url(#anim)'
-				});
-				//data.element._node.style.strokeDashoffset = data.element._node.getTotalLength();
-				//data.element._node.style.strokeDasharray = data.element._node.getTotalLength();
+			//console.log(data);
+
+			if (data.type === 'area' && data.seriesIndex === SERIES_ORDER.user) {
+				data.element.remove();
 			}
-			if (data.type === 'point') {
-				//
+
+			if (data.type === 'area' && data.seriesIndex === SERIES_ORDER.final) {
+				this.clipPath = data.element.root()
+					.elem('defs', false, false, true)
+					.elem('clipPath', { id: clipPathID })
+					.elem('rect', {
+						x: 0, y: 0,
+						width: 0,
+						height: data.element.root().height()
+					});
+			}
+
+			if (data.type === 'line' && data.index === SERIES_ORDER.final) {
+				data.element.parent().attr({ 'style': `clip-path: url(#${clipPathID})` });
 			}
 		});
 	}
@@ -211,32 +209,6 @@ class Chart {
 				this.attachListeners();
 			}
 			this.update(data);
-
-			if (this.clipPath) {
-				//var marker = new Chartist.Svg('g');
-				//
-				//marker.elem('circle', {
-				//	cx: data.x, cy: data.y, r:7
-				//}, 'marker-A');
-
-				this.clipPath = data.svg.elem('defs', false, false, true)
-					.elem('clipPath', { id: 'anim' })
-					.elem('rect', {
-						//x: 0, y: 0, width: data.svg.width(), height: data.svg.height()
-						x: 0, y: 0, width: 0, height: data.svg.height()
-					})
-					.animate({
-						width: {
-							begin: 0,
-							dur: 20,
-							from: 0,
-							to: data.svg.width(),
-							easing: Chartist.Svg.Easing.easeOutQuint
-						}
-					});
-				this.finalPath.data.element.attr('clip-path', 'url(#anim)');
-				console.log(this.finalPath.node.parentNode, this.finalPath.data); //   clip-path: url(#clip-health-care);
-			}
 		});
 	}
 
@@ -296,6 +268,18 @@ class Chart {
 			\n${custom.name} ${custom.text}
 		`;
 	}
+
+	showResults() {
+		this.clipPath.animate({
+			width: {
+				begin: 0,
+				dur: 2000,
+				from: 0,
+				to: this.clipPath.root().width(),
+				easing: Chartist.Svg.Easing.easeOutQuint
+			}
+		});
+	}
 }
 
 const labels = ['2008', '09', '10', '11', '12', '13', '14', '15', '16', '17'];
@@ -320,16 +304,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const chart = new Chart('.ct-chart', data, options);
 	chart.init();
-	//const chart = new Chartist.Line('.ct-chart', data, options);
-
 	console.info(chart);
 
 	document.querySelector('.btn').addEventListener('click', () => {
-
-		chart.drawFinalPath();
-		//data.series[0] = new Array(10).fill(null).map(() => (Math.random() * 10).toFixed(0) );
-		//data.series[1][4] = data.series[0][4];
-		//chart.chart.update(data);
+		chart.showResults();
 	});
+
+	// TODO: add values on points
+	// TODO: add chart title
+	// TODO: add legend
+	// TODO: prevent draw from empty point, should be step by step
+	// TODO: disable draw on mouseUP when mouseOUT and the same for touch
+	// TODO: detach all events when clicked - 'show results' and disable draw again
+	// TODO: draw .btn from Class
+	// TODO: draw animated grid fot hidden part
 
 });
