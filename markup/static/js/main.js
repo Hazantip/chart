@@ -27,6 +27,9 @@ const SERIES_ORDER = {
 	'final': 0,
 };
 
+const POINT_TEXT_Y_CORRELATION = 4;
+const BREAKPOINT_TEXT_Y_CORRELATION = 15; // middle point
+
 class Chart {
 	constructor(container, data, options) {
 
@@ -44,6 +47,7 @@ class Chart {
 			axisY: {
 				onlyInteger: true,
 				//offset: 40,
+				//labelInterpolationFnc: Chartist.noop,
 				labelInterpolationFnc: function (value) {
 					return `${value}$`;
 				},
@@ -52,6 +56,9 @@ class Chart {
 				//	x: 0,
 				//	y: 0
 				//},
+				showLabel: false,
+				//showGrid: true,
+				//scaleMinSpace: 20,
 			},
 			axisX: {
 				//type: Chartist.AutoScaleAxis
@@ -70,6 +77,9 @@ class Chart {
 		this.xAxisStepLength = 0;
 		this.offset = {};
 		this.clipPath = null;
+		this.startPointValue = null;
+		this.middlePointValue = null;
+		this.finalPoint = {};
 
 		this.drawEnable = false;
 		this.scrollBlocked = false;
@@ -133,9 +143,6 @@ class Chart {
 		//console.info(`[x, y]: ${pageX}, ${pageY}`);
 		//console.info(xSelector);
 
-		// - TODO: prevent draw from some middle point(should be 1,2,3....  not 3,2,1 or 3,4,5)
-		// + FIXME: point.y is bit wrong when page scrolled;
-
 		if (
 			xSelector >= 0
 			&& xSelector < this.data.labels.length
@@ -161,7 +168,7 @@ class Chart {
 	}
 
 	update(data) {
-		console.info('update', data);
+		//console.info('update', data);
 
 		this.height = data.chartRect.height();
 		this.width = data.chartRect.width();
@@ -196,6 +203,71 @@ class Chart {
 
 			if (data.type === 'line' && data.index === SERIES_ORDER.final) {
 				data.element.parent().attr({ 'style': `clip-path: url(#${clipPathID})` });
+			}
+
+			//draw point values
+			if (data.type === 'point' && data.seriesIndex === SERIES_ORDER.initial) {
+				if (data.index === 0) {
+					this.startPointValue = data.group
+						.elem('text', {
+							x: data.x - 10,
+							y: data.y + POINT_TEXT_Y_CORRELATION,
+							'text-anchor': 'end',
+							//style: 'direction: rtl',
+						})
+						.addClass('ct-point-value');
+					this.startPointValue.text(data.value.y.toFixed(0));
+				}
+				if (data.index === this.data.breakPoint - 1) {
+					this.middlePointValue = data.group
+						.elem('text', {
+							x: data.x - 10,
+							y: data.y + BREAKPOINT_TEXT_Y_CORRELATION,
+							'text-anchor': 'end',
+						})
+						.addClass('ct-point-value');
+					this.middlePointValue.text(data.value.y.toFixed(0));
+				}
+			}
+
+			//draw point values
+			if (data.type === 'point' && data.seriesIndex === SERIES_ORDER.user) {
+
+				if (data.index === this.data.breakPoint) {
+					this.finalPoint.value = data.group
+						.elem('text', {
+							x: data.axisX.axisLength + data.axisX.stepLength + 10,
+							y: data.y + POINT_TEXT_Y_CORRELATION,
+							'text-anchor': 'start',
+						})
+						.addClass('ct-point-value');
+				}
+
+				if (this.finalPoint.value) {
+					this.finalPoint.value.attr({ 'y': data.y + POINT_TEXT_Y_CORRELATION });
+					this.finalPoint.value._node.innerHTML = data.value.y.toFixed(0);
+				}
+
+				// set dot position (NOTE: just css:last-of-type is visible)
+				data.element.attr({
+					x1: data.axisX.axisLength + data.axisX.stepLength,
+					x2: data.axisX.axisLength + data.axisX.stepLength
+				});
+			}
+
+			if (data.type === 'point' && data.seriesIndex === SERIES_ORDER.final) {
+				console.log(data);
+				if (data.index === data.series.length - 1) {
+					this.startPointValue = data.group
+						.elem('text', {
+							x: data.axisX.axisLength + data.axisX.stepLength + 10,
+							y: data.y + POINT_TEXT_Y_CORRELATION,
+							//'text-anchor': 'end',
+							//style: 'direction: rtl',
+						})
+						.addClass('ct-point-value');
+					this.startPointValue.text(data.value.y.toFixed(0));
+				}
 			}
 		});
 	}
@@ -237,13 +309,13 @@ class Chart {
 			let result;
 			switch (key) {
 				case SERIES_ORDER.initial:
-					result = this.fillArray(0, breakPoint, array); // array.slice(0, breakPoint);
+					result = this.fillArray(0, breakPoint, array);
 					break;
 				case SERIES_ORDER.final:
-					result = this.fillArray(breakPoint - 1, array.length, array); // array.slice(breakPoint, array.length);
+					result = this.fillArray(breakPoint - 1, array.length, array);
 					break;
 				case SERIES_ORDER.user:
-					result = this.fillArray(breakPoint - 1, breakPoint, array); // array.slice(breakPoint - 1, breakPoint);
+					result = this.fillArray(breakPoint - 1, breakPoint, array);
 					break;
 				default:
 					break;
@@ -273,12 +345,15 @@ class Chart {
 		this.clipPath.animate({
 			width: {
 				begin: 0,
-				dur: 2000,
-				from: 0,
-				to: this.clipPath.root().width(),
-				easing: Chartist.Svg.Easing.easeOutQuint
+				dur: 2500,
+				// 50 - random value, to fix start animation position
+				from: this.clipPath.root().width() / (this.data.series[0].length / this.data.breakPoint) - 50,
+				// 50 - random value, for prevent clip last point value which is outer of chart
+				to: this.clipPath.root().width() + 50,
+				easing: Chartist.Svg.Easing.easeOutQuad
 			}
 		});
+		console.info('ease: ', Chartist.Svg.Easing);
 	}
 }
 
@@ -310,10 +385,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		chart.showResults();
 	});
 
-	// TODO: add values on points
+	// + TODO: add values on points
 	// TODO: add chart title
 	// TODO: add legend
-	// TODO: prevent draw from empty point, should be step by step
+	// TODO: 	prevent draw from some middle point(should be 1,2,3....  not 3,2,1 or 3,4,5)
+	// 			OR IF CLICK ON MIDDLE SHOULD DRAW PREVIOUS POINTS
 	// TODO: disable draw on mouseUP when mouseOUT and the same for touch
 	// TODO: detach all events when clicked - 'show results' and disable draw again
 	// TODO: draw .btn from Class

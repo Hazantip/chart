@@ -20,26 +20,24 @@
 }
 
 .ct-chart {
-	//desktop
-	//touch-action: auto !important;
-	//user-select: none !important;
-	//-webkit-user-drag: none !important;
-	//-webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
-	//-webkit-touch-callout: auto !important;
 	
-	//mobile
-	//touch-action: manipulation !important; // auto
-	//-webkit-user-select: auto !important; // auto
-	//-webkit-touch-callout: none;
-	//-webkit-user-drag: auto !important; // none || auto || element
-	//-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	& > svg {
+		overflow: visible;
+	}
+	
+	.ct-point-value {
+		fill: #333;
+		font-size: 14px;
+		font-weight: bold;
+	}
+	
+	.ct-line {
+		//stroke-linecap: round;
+		stroke-linejoin: bevel;
+	}
 	
 	.ct-series {
-		.ct-line {
-			stroke-linecap: round;
-			stroke-linejoin: bevel;
-		}
-		&.ct-series-a { // final
+		&-a { // final
 			opacity: 1;
 			.ct-area {
 				fill: deepskyblue;
@@ -55,10 +53,7 @@
 				}
 			}
 		}
-		&.ct-series-b { // user
-			.ct-area {
-				//opacity: 0;
-			}
+		&-b { // user
 			.ct-line {
 				stroke: #f4c63d;
 				stroke-dasharray: 1 7;
@@ -72,7 +67,7 @@
 				}
 			}
 		}
-		&.ct-series-c { // initial
+		&-c { // initial
 			.ct-area {
 				fill: tomato;
 			}
