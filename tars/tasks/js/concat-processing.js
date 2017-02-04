@@ -81,7 +81,7 @@ module.exports = () => {
      *  - call lint task;
      *  - prevent pipe breaking;
      *  - creation of stream;
-     *  - update source maps;
+     *  - init source maps;
      *  - base processing;
      *  - compress code;
      *  - notify about end of task;
@@ -96,7 +96,7 @@ module.exports = () => {
                     notifier.error('An error occurred while processing js-files.', error);
                 }
             }))
-            .pipe(gulpif(generateSourceMaps, sourcemaps.update()))
+            .pipe(gulpif(generateSourceMaps, sourcemaps.init()))
             .pipe(base())
             .pipe(compress())
             .pipe(notifier.success('JavaScript has been processed'))

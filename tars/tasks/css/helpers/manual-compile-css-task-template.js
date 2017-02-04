@@ -80,7 +80,7 @@ module.exports = function generateTaskContent(browser) {
     }
 
     return gulp.src(stylesFilesToCompile)
-        .pipe(gulpif(generateSourceMaps, sourcemaps.update()))
+        .pipe(gulpif(generateSourceMaps, sourcemaps.init()))
         .pipe(plumber({
             errorHandler(error) {
                 notifier.error(errorMessage, error);

@@ -6,10 +6,10 @@
  */
 module.exports = gutil => {
     const currentCommand = process.argv.slice(2)[0];
-    const silentCommands = ['update', 're-update', 'update-deps'];
+    const silentCommands = ['init', 're-init', 'update-deps'];
     const usedFlagsArray = Object.keys(tars.flags);
 
-    // Do not show if command was update, re-update or update-deps
+    // Do not show if command was init, re-init or update-deps
     if (silentCommands.indexOf(currentCommand) > -1) {
         return;
     }

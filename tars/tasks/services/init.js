@@ -29,7 +29,7 @@ function makeUrl(type, version) {
  * Init builder, download css-preprocessor and templater
  */
 module.exports = () => {
-    return gulp.task('service:update', ['service:create-fs'], () => {
+    return gulp.task('service:init', ['service:create-fs'], () => {
 
         const ncp = tars.require('ncp');
         const Download = tars.require('download');
@@ -243,7 +243,7 @@ module.exports = () => {
             console.log(gutil.colors.black.bold('--------------------------------------------------------\n'));
         }
 
-        // Start update
+        // Start init
         Promise
             .all([
                 generateStartScreen(),

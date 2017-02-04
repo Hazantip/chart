@@ -52,7 +52,7 @@ module.exports = () => {
             /* eslint-enable no-undefined */
 
             if (!useHMR) {
-                browserSync.update(browserSyncConfig);
+                browserSync.init(browserSyncConfig);
                 devTaskFinallyActions();
             } else {
                 const webpackConfig = require(`${cwd}/webpack.config`);
@@ -75,7 +75,7 @@ module.exports = () => {
                 tars.say('Wait for a moment, please. Webpack is preparing bundle for you...');
 
                 webpackDevMiddlewareInstance.waitUntilValid(() => {
-                    browserSync.update(browserSyncConfig);
+                    browserSync.init(browserSyncConfig);
                     devTaskFinallyActions();
                 });
             }
