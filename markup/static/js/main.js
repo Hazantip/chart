@@ -29,13 +29,15 @@ const SERIES_ORDER = {
 
 const POINT_TEXT_Y_CORRELATION = 4;
 const BREAKPOINT_TEXT_Y_CORRELATION = 15; // middle point
+const FINALPOINT_X_CORRELATION = 10;
+const FINALPOINT_TEXT_X_CORRELATION = 20;
 
 class Chart {
 	constructor(container, data, options) {
 
 		this.container = container;
 		this.el = document.querySelector(container);
-		this.elOverlay = this.el.querySelector('.overlay');
+		this.elOverlay = this.el.querySelector('.ct-chart-overlay');
 		this.chart = null;
 
 		this.data = data;
@@ -46,29 +48,26 @@ class Chart {
 			fullWidth: true,
 			axisY: {
 				onlyInteger: true,
-				//offset: 40,
+				offset: 0,
 				//labelInterpolationFnc: Chartist.noop,
 				labelInterpolationFnc: function (value) {
 					return `${value}$`;
 				},
-				//position: 'start',
-				//labelOffset: {
-				//	x: 0,
-				//	y: 0
-				//},
 				showLabel: false,
-				//showGrid: true,
-				//scaleMinSpace: 20,
 			},
 			axisX: {
-				//type: Chartist.AutoScaleAxis
-				//offset: 40,
-				//position: 'end',
 				labelOffset: {
-					//x: -15,
 					y: 5
 				},
-			}
+			},
+			ui: {
+				colors: {
+					start: '#ff6347',
+					end: '#00bfff',
+					user: '#f4c63d',
+					area: '#f3f3f3'
+				}
+			},
 		};
 		this.options = merge(this.defaultOptions, options);
 
@@ -91,9 +90,6 @@ class Chart {
 		document.addEventListener(events[this.eventType].move, (e) => {
 			if (this.scrollBlocked) {
 				e.preventDefault();
-				//console.info('blocked');
-			} else {
-				//console.info('unblocked');
 			}
 		}, false);
 	}
@@ -114,8 +110,10 @@ class Chart {
 	}
 
 	onUpListener(e) {
-		this.setDrawEnable(false);
 		this.log(e.type);
+		if (this.drawEnable) {
+			this.setDrawEnable(false);
+		}
 	}
 
 	onMoveListener(e) {
@@ -159,11 +157,16 @@ class Chart {
 
 	attachListeners() {
 		console.info('attach');
+
 		this.elOverlay.addEventListener(events[this.eventType].down, this.onDownListener.bind(this), false);
-		this.elOverlay.addEventListener(events[this.eventType].up, this.onUpListener.bind(this), false);
 		this.elOverlay.addEventListener(events[this.eventType].move, this.onMoveListener.bind(this), false);
-		window.addEventListener('resize', this.onResizeListener.bind(this), false);
+
+		// to document, because want to be able to catch up, outside of the chart
+		document.documentElement.addEventListener(events[this.eventType].up, this.onUpListener.bind(this), false);
+
+		//window.addEventListener('resize', this.onResizeListener.bind(this), false);
 		//window.addEventListener('resize', debounce(this.update.bind(this), 300), false);
+
 		this.eventsAttached = true;
 	}
 
@@ -184,12 +187,13 @@ class Chart {
 		const clipPathID = 'FINAL_SERIES_CLIP';
 
 		this.chart.on('draw', (data) => {
-			//console.log(data);
 
+			// Remove user area
 			if (data.type === 'area' && data.seriesIndex === SERIES_ORDER.user) {
 				data.element.remove();
 			}
 
+			// Render clipPath for final area
 			if (data.type === 'area' && data.seriesIndex === SERIES_ORDER.final) {
 				this.clipPath = data.element.root()
 					.elem('defs', false, false, true)
@@ -201,11 +205,50 @@ class Chart {
 					});
 			}
 
+			// Clip final area
 			if (data.type === 'line' && data.index === SERIES_ORDER.final) {
 				data.element.parent().attr({ 'style': `clip-path: url(#${clipPathID})` });
 			}
 
-			//draw point values
+			// Draw legend
+			if (data.type === 'area') {
+				//debugger;
+				const chartFirstPartWidth = data.axisX.axisLength / (this.data.series[0].length / this.data.breakPoint);
+				const chartSecondPartWidth = data.axisX.axisLength - chartFirstPartWidth;
+
+				if (data.seriesIndex === SERIES_ORDER.initial) {
+					data.element.root()
+						.elem('text', {
+							x: chartFirstPartWidth / 2,
+							y: data.axisY.axisLength,
+							'text-anchor': 'middle'
+						})
+						.text(this.data.legend.start)
+						.addClass('ct-legend');
+				}
+				if (data.seriesIndex === SERIES_ORDER.final) {
+					data.element.root()
+						.elem('text', {
+							x: chartFirstPartWidth + (chartSecondPartWidth / 2),
+							y: data.axisY.axisLength,
+							'text-anchor': 'middle'
+						})
+						.text(this.data.legend.end)
+						.addClass('ct-legend');
+				}
+				if (!this.finalPoint.text) {
+					data.element.root()
+						.elem('text', {
+							x: chartFirstPartWidth + (chartSecondPartWidth / 2),
+							y: data.axisY.axisLength / 3,
+							'text-anchor': 'middle'
+						})
+						.text(this.data.legend.user)
+						.addClass('ct-legend ct-legend-instructions');
+				}
+			}
+
+			// Draw start points values
 			if (data.type === 'point' && data.seriesIndex === SERIES_ORDER.initial) {
 				if (data.index === 0) {
 					this.startPointValue = data.group
@@ -213,7 +256,6 @@ class Chart {
 							x: data.x - 10,
 							y: data.y + POINT_TEXT_Y_CORRELATION,
 							'text-anchor': 'end',
-							//style: 'direction: rtl',
 						})
 						.addClass('ct-point-value');
 					this.startPointValue.text(data.value.y.toFixed(0));
@@ -230,40 +272,38 @@ class Chart {
 				}
 			}
 
-			//draw point values
+			// Draw user point value
 			if (data.type === 'point' && data.seriesIndex === SERIES_ORDER.user) {
 
 				if (data.index === this.data.breakPoint) {
-					this.finalPoint.value = data.group
+					this.finalPoint.text = data.group
 						.elem('text', {
-							x: data.axisX.axisLength + data.axisX.stepLength + 10,
+							x: data.axisX.axisLength + FINALPOINT_TEXT_X_CORRELATION,
 							y: data.y + POINT_TEXT_Y_CORRELATION,
 							'text-anchor': 'start',
 						})
 						.addClass('ct-point-value');
 				}
 
-				if (this.finalPoint.value) {
-					this.finalPoint.value.attr({ 'y': data.y + POINT_TEXT_Y_CORRELATION });
-					this.finalPoint.value._node.innerHTML = data.value.y.toFixed(0);
+				if (this.finalPoint.text) {
+					this.finalPoint.text.attr({ 'y': data.y + POINT_TEXT_Y_CORRELATION });
+					this.finalPoint.text._node.innerHTML = data.value.y.toFixed(0);
 				}
 
 				// set dot position (NOTE: just css:last-of-type is visible)
 				data.element.attr({
-					x1: data.axisX.axisLength + data.axisX.stepLength,
-					x2: data.axisX.axisLength + data.axisX.stepLength
+					x1: data.axisX.axisLength + FINALPOINT_X_CORRELATION,
+					x2: data.axisX.axisLength + FINALPOINT_X_CORRELATION
 				});
 			}
 
+			// Draw final point value
 			if (data.type === 'point' && data.seriesIndex === SERIES_ORDER.final) {
-				console.log(data);
 				if (data.index === data.series.length - 1) {
 					this.startPointValue = data.group
 						.elem('text', {
-							x: data.axisX.axisLength + data.axisX.stepLength + 10,
-							y: data.y + POINT_TEXT_Y_CORRELATION,
-							//'text-anchor': 'end',
-							//style: 'direction: rtl',
+							x: data.axisX.axisLength + FINALPOINT_TEXT_X_CORRELATION,
+							y: data.y + POINT_TEXT_Y_CORRELATION
 						})
 						.addClass('ct-point-value');
 					this.startPointValue.text(data.value.y.toFixed(0));
@@ -290,6 +330,7 @@ class Chart {
 		this.chart = new Chartist.Line(container, data, options);
 		this.createdListener();
 		this.drawListener();
+		this.renderTitle();
 	}
 
 	fillArray(fromPoint, toPoint, array) {
@@ -326,19 +367,9 @@ class Chart {
 
 	init() {
 		this.data.series = this.generateArrays(this.data.series[0], this.data.breakPoint);
-		this.defaultOptions.high = Math.max(...[...this.data.series[SERIES_ORDER.initial], ...this.data.series[SERIES_ORDER.final]]);
+		this.options.high = Math.max(...[...this.data.series[SERIES_ORDER.initial], ...this.data.series[SERIES_ORDER.final]]);
 
 		this.render();
-	}
-
-	log(event, custom = { name: '', text: ''}) {
-		document.getElementById('log').innerHTML = `
-			\nevent: ${event}
-			\nthis.eventType: ${this.eventType}
-			\nthis.scrollBlocked: ${this.scrollBlocked}
-			\nthis.drawEnable: ${this.drawEnable}
-			\n${custom.name} ${custom.text}
-		`;
 	}
 
 	showResults() {
@@ -353,11 +384,31 @@ class Chart {
 				easing: Chartist.Svg.Easing.easeOutQuad
 			}
 		});
-		console.info('ease: ', Chartist.Svg.Easing);
+	}
+
+	renderTitle() {
+		const { title = '' } = this.data;
+		if (title) {
+			const node = document.createElement('div');
+			node.classList.add('ct-chart-title');
+			node.innerHTML = title.replace(new RegExp(/{/, 'g'), '<b>').replace(new RegExp(/}/, 'g'), '</b>');
+
+			this.el.parentNode.insertBefore(node, this.el);
+		}
+	}
+
+	log(event, custom = { name: '', text: ''}) {
+		document.getElementById('log').innerHTML = `
+			\nevent: ${event}
+			\nthis.eventType: ${this.eventType}
+			\nthis.scrollBlocked: ${this.scrollBlocked}
+			\nthis.drawEnable: ${this.drawEnable}
+			\n${custom.name} ${custom.text}
+		`;
 	}
 }
 
-const labels = ['2008', '09', '10', '11', '12', '13', '14', '15', '16', '17'];
+const labels = ['2008', '09', '10', '11', '12', '13', '14', '15', '16', '2017'];
 const dataSize = labels.length;
 const dataArr = new Array(dataSize).fill(null).map(() => (+(Math.random() * 1000).toFixed(4)));
 const breakPoint = dataSize / 2;
@@ -365,6 +416,12 @@ const breakPoint = dataSize / 2;
 document.addEventListener('DOMContentLoaded', () => {
 
 	const data = {
+		title: 'Under Mr. Obama, {the number} of {violent crimes} per 100,000 people..',
+		legend: {
+			start: 'BUSH YEARS',
+			end: 'OBAMA YEARS',
+			user: 'Draw the line'
+		},
 		labels: labels,
 		series: [ dataArr ],
 		breakPoint
@@ -381,18 +438,82 @@ document.addEventListener('DOMContentLoaded', () => {
 	chart.init();
 	console.info(chart);
 
-	document.querySelector('.btn').addEventListener('click', () => {
+	document.querySelector('.ct-chart-btn').addEventListener('click', () => {
 		chart.showResults();
 	});
 
 	// + TODO: add values on points
-	// TODO: add chart title
-	// TODO: add legend
+	// + TODO: add chart title
+	// + TODO: add legend
+	// TODO: hide user legend when start drawing
 	// TODO: 	prevent draw from some middle point(should be 1,2,3....  not 3,2,1 or 3,4,5)
 	// 			OR IF CLICK ON MIDDLE SHOULD DRAW PREVIOUS POINTS
-	// TODO: disable draw on mouseUP when mouseOUT and the same for touch
+	// + TODO: disable draw on mouseUP when mouseOUT and the same for touch
 	// TODO: detach all events when clicked - 'show results' and disable draw again
 	// TODO: draw .btn from Class
 	// TODO: draw animated grid fot hidden part
 
 });
+
+/*
+var options = {
+	axisX: {
+		offset: 30,
+		position: "end",
+		labelOffset: {
+			x: 0,
+			y: 0
+		},
+		showLabel: true,
+		showGrid: true,
+		labelInterpolationFnc: Chartist.noop,
+		type: undefined
+	},
+	axisY: {
+		offset: 40,
+		position: "start",
+		labelOffset: {
+			x: 0,
+			y: 0
+		},
+		showLabel: true,
+		showGrid: true,
+		labelInterpolationFnc: Chartist.noop,
+		type: undefined,
+		scaleMinSpace: 20,
+		onlyInteger: false
+	},
+	width: undefined,
+	height: undefined,
+	showLine: true,
+	showPoint: true,
+	showArea: false,
+	areaBase: 0,
+	lineSmooth: true,
+	low: undefined,
+	high: undefined,
+	chartPadding: {
+		top: 15,
+		right: 15,
+		bottom: 5,
+		left: 10
+	},
+	fullWidth: true,
+	reverseData: false,
+	classNames: {
+		chart: "ct-chart-line",
+		label: "ct-label",
+		labelGroup: "ct-labels",
+		series: "ct-series",
+		line: "ct-line",
+		point: "ct-point",
+		area: "ct-area",
+		grid: "ct-grid",
+		gridGroup: "ct-grids",
+		vertical: "ct-vertical",
+		horizontal: "ct-horizontal",
+		start: "ct-start",
+		end: "ct-end"
+	}
+};
+*/
